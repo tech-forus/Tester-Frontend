@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // For any navigation links
 import { useAuth } from '../hooks/useAuth'; // To get user info and logout
 import { User, Settings, MapPin, Truck as VendorIcon, LogOut } from 'lucide-react'; // Example icons
+import Cookies from 'js-cookie';
 
 // Placeholder types - these would ideally come from your src/types/index.ts
 // and match what the backend /api/users/me returns
@@ -55,29 +56,55 @@ const CustomerDashboardPage: React.FC = () => {
           // const data: UserProfile = await response.json();
           // setProfile(data);
 
-          // MOCK PROFILE DATA FOR NOW
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const mockProfile: UserProfile = {
-            name: user?.name || 'Customer Name', // Get from useAuth if possible
-            companyName: 'Mock Company Inc.',
-            email: user?.email || 'customer@example.com', // Get from useAuth if possible
-            contactNumber: '9876543210',
-            gstNumber: '27ABCDE1234F1Z5',
-            billingAddress: { street: '123 Main St', city: 'Mumbai', state: 'MH', postalCode: '400001', country: 'India' },
+          // Fetch user's added vendors (temporary transporters)
+          const token = Cookies.get('authToken');
+          let userVendors: BasicVendorInfo[] = [];
+          
+          if (token) {
+            try {
+              const vendorsResponse = await fetch(`/api/transporter/gettemporarytransporters?customerID=${user._id}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (vendorsResponse.ok) {
+                const vendorsData = await vendorsResponse.json();
+                if (vendorsData.success && vendorsData.data) {
+                  // Convert temporary transporters to BasicVendorInfo format
+                  userVendors = vendorsData.data.map((vendor: any) => ({
+                    id: vendor._id,
+                    name: vendor.companyName
+                  }));
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching vendors:', error);
+            }
+          }
+
+          // Create profile with real user data
+          const userProfile: UserProfile = {
+            name: user?.name || 'Customer Name',
+            companyName: user?.companyName || 'Company Name',
+            email: user?.email || 'customer@example.com',
+            contactNumber: user?.contactNumber || '9876543210',
+            gstNumber: user?.gstNumber || '27ABCDE1234F1Z5',
+            billingAddress: { 
+              street: user?.address || '123 Main St', 
+              city: user?.city || 'Mumbai', 
+              state: user?.state || 'MH', 
+              postalCode: user?.pincode?.toString() || '400001', 
+              country: 'India' 
+            },
             pickupAddresses: [
               { label: 'Warehouse A', street: '456 Indl. Area', city: 'Pune', state: 'MH', postalCode: '411001', country: 'India' },
             ],
-            preferredVendorIds: ['1'], // Mock: Prefers vendor with ID '1'
+            preferredVendorIds: userVendors.map(v => v.id), // Use all user's vendors as preferred
           };
-          setProfile(mockProfile);
-
-          // MOCK FETCH ALL VENDORS FOR PREFERENCE SELECTION
-          const mockAllVendors: BasicVendorInfo[] = [
-            { id: '1', name: 'Mock Speedy Trans' },
-            { id: '2', name: 'Mock CarefulMovers' },
-            { id: '3', name: 'Mock BudgetFreight' },
-          ];
-          setAllVendors(mockAllVendors);
+          setProfile(userProfile);
+          setAllVendors(userVendors);
 
         } catch (error) {
           console.error("Failed to fetch profile data:", error);
@@ -185,7 +212,15 @@ const CustomerDashboardPage: React.FC = () => {
         ) : (
           <p className="text-sm text-gray-500">No preferred vendors selected.</p>
         )}
-        {/* TODO: Add "Manage Preferred Vendors" button and modal/form using `allVendors` list */}
+        <div className="mt-4">
+          <Link 
+            to="/my-vendors" 
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <VendorIcon size={16} className="mr-2" />
+            Manage Vendors
+          </Link>
+        </div>
       </section>
 
       <div className="mt-8 text-center">

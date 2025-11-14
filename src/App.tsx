@@ -30,6 +30,7 @@ import UserSelect from './pages/UserSelect';
 import BiddingPage from './pages/BiddingPage';
 import VehicleInfoPage from './pages/VehicleInfoPage';
 import TestLab from './pages/TestLab';
+import MyVendors from './pages/MyVendors';
 
 // ⬇️ NEW: buy page (supports /buy-subscription-plan and /buy-subscription-plan/:vendorSlug)
 import BuySubscriptionPage from './pages/BuySubscriptionPage';
@@ -231,6 +232,17 @@ function App() {
               element={
                 <MainLayout>
                   <VehicleInfoPage />
+                </MainLayout>
+              }
+            />
+
+            <Route
+              path="/my-vendors"
+              element={
+                <MainLayout>
+                  <PrivateRoute>
+                    <MyVendors />
+                  </PrivateRoute>
                 </MainLayout>
               }
             />
